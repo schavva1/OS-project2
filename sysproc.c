@@ -119,6 +119,7 @@ int sys_setrunningticks(void)
 
   return 0;
 }
+
 int sys_setwaitingticks(void)
 {
   if (argint(0, &cpu->var1) < 0)
@@ -132,7 +133,21 @@ int sys_setwaitingticks(void)
 
 int sys_setpriority(void)
 {
-	//struct proc *p;
+	int pid,priority;
+	if(argint(0, &pid)<0)
+	{
+		return -1;
+	}
+	if(argint(1, &priority)< 0)	
+	{
+		return -1;
+	}	
+	return systempriority(pid,priority);
+}	
+
+/*int sys_setpriority(void)
+{
+	
 	int pid;
 	int priority;
 	if(argint(0, &pid)<0)
@@ -140,7 +155,7 @@ int sys_setpriority(void)
 		return -1;
 	}
 	argint(1,&priority);
-	/*acquire(&ptable.lock);
+	acquire(&ptable.lock);
 	
 	for(p = ptable.proc; p< &ptable.proc[NPROC]; p++)
 	{
@@ -157,8 +172,8 @@ int sys_setpriority(void)
 	{
 		release(&ptable.lock);
 		return -1;
-	}*/
+	}
  return 0;		
-}
+}*/
 	
 	

@@ -1,6 +1,6 @@
 // Segments in proc->gdt.
 #define NSEGS     7
-
+int systempriority(int,int);
 // Per-CPU state
 struct cpu {
   uchar id;                    // Local APIC ID; index into cpus[] below
@@ -18,6 +18,8 @@ struct cpu {
   int var1;
 };
 
+//cpu->var = 2;
+//cpu->var1 = 4;
 extern struct cpu cpus[NCPU];
 extern int ncpu;
 
@@ -74,6 +76,7 @@ struct proc {
   int waitticks;
   int priority;
   int lr;
+  int flag;
 };
 
 // Process memory is laid out contiguously, low addresses first:

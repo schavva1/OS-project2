@@ -10,8 +10,7 @@ int sched_policy = 1;                         // 1  MLFQ Scheduler
 struct proc* q0[64];
 struct proc* q1[64];
 int c0=0,c1=0;
-cpu->var = 2;
-cpu->var1 = 4;
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -32,6 +31,8 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+  cpu -> var = 2;
+  cpu -> var1 = 4;
   //cprintf("threshold %d\n",cpu->var);
 }
 
@@ -50,16 +51,18 @@ allocproc(void)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
       goto found;
-  p->priority = 0;
+  p->priority = 4;
   p->runticks = 0;
+  p->waitticks= 0;
   release(&ptable.lock);
   return 0;
 
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  p->priority = 0;
+  p->priority = 4;
   p->runticks = 0;
+  p->waitticks= 0;
   q0[c0] = p;
   c0++;
   
@@ -223,6 +226,32 @@ exit(void)
 
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
+  for(int i=0;i < c0 ; i++)
+  {
+	  if(proc->pid == q0[i]->pid)
+	  {	
+	  	int index;
+	  	index = i;
+	  	for(int j=index;j< c0-1;j++)
+	  	{
+	  		q0[j] = q0[j+1];
+	  	}
+	  	c0--;
+	  }
+  }
+  for(int l=0;l < c1 ; l++)
+  {
+	  	if(proc->pid == q1[l]->pid)
+	  	{
+		  	int index;
+		  	index = l;
+		  	for(int k=index;k< c1-1;k++)
+		  	{
+		  		q1[k] = q1[k+1];
+		  	}
+		  	c1--;	
+		}	
+  }	  
   sched();
   panic("zombie exit");
 }
@@ -298,10 +327,10 @@ scheduler(void)
 	//struct proc *highP = NULL;
     // Loop over process table looking for process to run.
     
-    acquire(&ptable.lock);
-    ran = 0;
     if(sched_policy == 0)
     {
+    	acquire(&ptable.lock);
+    	ran = 0;
 		for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
 		{
 		  if(p->state != RUNNABLE)
@@ -317,21 +346,34 @@ scheduler(void)
 		  p->state = RUNNING;
 		  swtch(&cpu->scheduler, proc->context);
 		  switchkvm();
+		  
+		  if(p ->pid > 2)
+	  	    {
+	  	    	//p->runticks++;
+	  	    	//cprintf("running ticks for process %d \n",p->state);
+	  	    }
 
 		  // Process is done running for now.
 		  // It should have changed its p->state before coming back.
 		  proc = 0;
 		}
     	release(&ptable.lock);
+    	
+    	if (ran == 0)
+		{
+		    halt();
+		}
     }	
 	
 
      //--*priority based scheduler*--//
 	else 
 	{
-		//cpu->var = 2;
-		//cpu->var1 = 4;
-	  	for(i=0;i<= c0;i++)
+		//cprintf("Testing\n");
+		acquire(&ptable.lock);
+    	ran = 0;
+		
+	  	for(i=0; i < c0; i++)
 	  	{
 	  		p = q0[i];
 	  		if(p -> state != RUNNABLE)
@@ -340,64 +382,91 @@ scheduler(void)
 	  		}
 	  		
 	  		 ran = 1;
-	  		
+ 		
 	  	    proc = p;
-	  	    if(p->pid > 2)
-	  	    {
-	  	    	p->runticks++;
-	  	    	cprintf("running ticks for process 1 %d",p->runticks);
-	  	    }
 	  	    switchuvm(p);
 	  	    p->state = RUNNING;
 			swtch(&cpu->scheduler, proc->context);
 			switchkvm();
+			//cprintf("process executing in c0 is %d \n",p->pid);
+			
+			
+			if(p ->pid > 2)
+	  	    {
+	  	    	p->runticks++;
+	  	    	//cprintf("running ticks for process %d \n",p->state);
+	  	    }
+	  	    
 	  	    if(p->runticks > cpu->var)
 	  	    {
+	  	    	
 	  	    	q1[c1] = p;
 	  	    	c1++;  
-	  	    	for(j=i;j< c0;j++)
+	  	    	
+	  	    	for(j=i;j< c0 - 1;j++)
 	  	    	{
 	  	    		q0[j] = q0[j+1];
+	  	    		//cprintf("TESTING2 %d \n",q0[j]);
 	  	    	}
-	  	    	c0--;	                                                        
+	  	    	c0--;
+	  	    		                                                        
 	  	    }
-	  	    //q0[i] = NULL;
-			
-
+	  	    
+	  	  
 			  // Process is done running for now.
 			  // It should have changed its p->state before coming back.
 			 proc = 0;
 	 	 }	
-	 	if((c0 > 2) && (c1 > 0))
+	 	
+	 	if((c0 < 3) && (c1 > 0))
 	 	{
-	 		
-		 		p = q1[0];
-		  		if(p -> state != RUNNABLE)
+	 			//cprintf("Testing6-----\n");
+	 			int d,max,max_index=0;
+	 			max = q1[0]->waitticks;
+	 			
+	 			
+	 			for(d=0;d<c1;d++)
+	 			{
+	 				if(max < q1[d]->waitticks)
+	 				{
+	 					max = q1[d]->waitticks;
+	 					max_index = d;
+	 					
+	 				}	
+	 			}
+	 			
+	 			
+		 		p = q1[max_index];
+		 		
+		  		/*if(p -> state != RUNNABLE)
 		  		{
 		  			continue;
-		  		}
-		  		
+		  		}*/
+		  		//cprintf("Testing 10-----\n");
 		  		ran = 1;
 		  		
 		  	    proc = p;
 		  	    p->waitticks++;
-		  	    cprintf("wait ticks for process are %d",p->waitticks);
+		  	    
+		  	    //cprintf("wait ticks for process are %d",p->waitticks);
 		  	    
 		  	    switchuvm(p);
 		  	    p->state = RUNNING;
 				swtch(&cpu->scheduler, proc->context);
 				switchkvm();
+				//cprintf("process executing in c1 is %d \n", p->pid);
 		  	    if(p->waitticks > cpu->var1)
 		  	    {
+		  	    	
 		  	    	q0[c0] = p;
 		  	    	c0++;  
-		  	    	for(j=i;j< c1;j++)
+		  	    	for(j=i;j< c1 - 1;j++)
 		  	    	{
 		  	    		q1[j] = q1[j+1];
 		  	    	}
 		  	    	c1--;	                                                        
 		  	    }
-		  	    //q0[i] = NULL;
+		  	  
 			
 
 				  // Process is done running for now.
@@ -406,12 +475,11 @@ scheduler(void)
 		     	 	
 	 	}
   		release(&ptable.lock);
+  		if (ran == 0)
+		{
+		    halt();
+		}
   	 }	
-
-    if (ran == 0)
-    {
-        halt();
-    }
   }
 }
 
@@ -591,3 +659,66 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+int systempriority(int pid,int priority)
+{
+	struct proc *p;
+	for(p = ptable.proc; p< &ptable.proc[NPROC]; p++)
+	{
+		if(p->pid == pid)
+		{
+			p-> priority = priority;	
+		}
+	}
+	return 0;	
+}
+	
+/*int systempriority(int pid,int priority)
+{
+	//struct proc *p;
+	int p,old;
+	old = proc->priority;
+	if(p>=0 && p<201)
+	{
+		proc->priority = p;
+	}
+	else
+	{
+		return -1;
+	}
+	if(p >old)
+	{
+		yield();
+	}
+	return old;
+}	
+
+int systempriority(int pid,int priority)
+{
+	struct proc *p;
+	acquire(&ptable.lock);
+	
+	for(p = ptable.proc; p< &ptable.proc[NPROC]; p++)
+	{
+		if(p->pid == pid)
+		{
+			p-> priority = priority;
+			proc->state = RUNNABLE;
+			sched();
+			release(&ptable.lock);
+			return 0;
+		}
+	}
+	for(p = ptable.proc; p< &ptable.proc[NPROC]; p++)
+	{
+		release(&ptable.lock);
+		return -1;
+	}
+	return 0;
+}*/
+	
+	
+	
+	
+	
+
