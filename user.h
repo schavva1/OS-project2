@@ -23,6 +23,9 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int setrunningticks(int);
+int setwaitingticks(int);
+int setpriority(int,int);
 
 // ulib.c
 int stat(char*, struct stat*);

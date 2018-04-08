@@ -14,6 +14,8 @@ struct cpu {
   // Cpu-local storage variables; see below
   struct cpu *cpu;
   struct proc *proc;           // The currently-running process.
+  int var;
+  int var1;
 };
 
 extern struct cpu cpus[NCPU];
@@ -49,6 +51,8 @@ struct context {
   uint eip;
 };
 
+extern struct proc* q0[64];
+extern struct proc* q1[64];
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -66,6 +70,10 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  int runticks;
+  int waitticks;
+  int priority;
+  int lr;
 };
 
 // Process memory is laid out contiguously, low addresses first:

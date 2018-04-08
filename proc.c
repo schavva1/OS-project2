@@ -6,7 +6,12 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-
+int sched_policy = 1;                         // 1  MLFQ Scheduler
+struct proc* q0[64];
+struct proc* q1[64];
+int c0=0,c1=0;
+cpu->var = 2;
+cpu->var1 = 4;
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -16,7 +21,7 @@ static struct proc *initproc;
 
 int nextpid = 1;
 
-int sched_trace_enabled = 0; // for CS550 CPU/process project
+int sched_trace_enabled =1 ; // for CS550 CPU/process project
 
 extern void forkret(void);
 extern void trapret(void);
@@ -27,6 +32,7 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+  //cprintf("threshold %d\n",cpu->var);
 }
 
 //PAGEBREAK: 32
@@ -44,12 +50,19 @@ allocproc(void)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
       goto found;
+  p->priority = 0;
+  p->runticks = 0;
   release(&ptable.lock);
   return 0;
 
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->priority = 0;
+  p->runticks = 0;
+  q0[c0] = p;
+  c0++;
+  
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -265,41 +278,138 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
+
+
+
+
 void
 scheduler(void)
 {
+  //struct proc *pnext;
   struct proc *p;
-  int ran = 0; // CS550: to solve the 100%-CPU-utilization-when-idling problem
+  
+  int ran = 0,i,j; // CS550: to solve the 100%-CPU-utilization-when-idling problem
 
-  for(;;){
+  for(;;)
+  {
     // Enable interrupts on this processor.
     sti();
-
+	
+	//struct proc *highP = NULL;
     // Loop over process table looking for process to run.
+    
     acquire(&ptable.lock);
     ran = 0;
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
+    if(sched_policy == 0)
+    {
+		for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+		{
+		  if(p->state != RUNNABLE)
+		    continue;
 
-      ran = 1;
-      
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      swtch(&cpu->scheduler, proc->context);
-      switchkvm();
+		  ran = 1;
+		  
+		  // Switch to chosen process.  It is the process's job
+		  // to release ptable.lock and then reacquire it
+		  // before jumping back to us.
+		  proc = p;
+		  switchuvm(p);
+		  p->state = RUNNING;
+		  swtch(&cpu->scheduler, proc->context);
+		  switchkvm();
 
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      proc = 0;
-    }
-    release(&ptable.lock);
+		  // Process is done running for now.
+		  // It should have changed its p->state before coming back.
+		  proc = 0;
+		}
+    	release(&ptable.lock);
+    }	
+	
 
-    if (ran == 0){
+     //--*priority based scheduler*--//
+	else 
+	{
+		//cpu->var = 2;
+		//cpu->var1 = 4;
+	  	for(i=0;i<= c0;i++)
+	  	{
+	  		p = q0[i];
+	  		if(p -> state != RUNNABLE)
+	  		{
+	  			continue;
+	  		}
+	  		
+	  		 ran = 1;
+	  		
+	  	    proc = p;
+	  	    if(p->pid > 2)
+	  	    {
+	  	    	p->runticks++;
+	  	    	cprintf("running ticks for process 1 %d",p->runticks);
+	  	    }
+	  	    switchuvm(p);
+	  	    p->state = RUNNING;
+			swtch(&cpu->scheduler, proc->context);
+			switchkvm();
+	  	    if(p->runticks > cpu->var)
+	  	    {
+	  	    	q1[c1] = p;
+	  	    	c1++;  
+	  	    	for(j=i;j< c0;j++)
+	  	    	{
+	  	    		q0[j] = q0[j+1];
+	  	    	}
+	  	    	c0--;	                                                        
+	  	    }
+	  	    //q0[i] = NULL;
+			
+
+			  // Process is done running for now.
+			  // It should have changed its p->state before coming back.
+			 proc = 0;
+	 	 }	
+	 	if((c0 > 2) && (c1 > 0))
+	 	{
+	 		
+		 		p = q1[0];
+		  		if(p -> state != RUNNABLE)
+		  		{
+		  			continue;
+		  		}
+		  		
+		  		ran = 1;
+		  		
+		  	    proc = p;
+		  	    p->waitticks++;
+		  	    cprintf("wait ticks for process are %d",p->waitticks);
+		  	    
+		  	    switchuvm(p);
+		  	    p->state = RUNNING;
+				swtch(&cpu->scheduler, proc->context);
+				switchkvm();
+		  	    if(p->waitticks > cpu->var1)
+		  	    {
+		  	    	q0[c0] = p;
+		  	    	c0++;  
+		  	    	for(j=i;j< c1;j++)
+		  	    	{
+		  	    		q1[j] = q1[j+1];
+		  	    	}
+		  	    	c1--;	                                                        
+		  	    }
+		  	    //q0[i] = NULL;
+			
+
+				  // Process is done running for now.
+				  // It should have changed its p->state before coming back.
+				proc = 0;
+		     	 	
+	 	}
+  		release(&ptable.lock);
+  	 }	
+
+    if (ran == 0)
+    {
         halt();
     }
   }

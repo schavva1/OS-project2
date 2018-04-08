@@ -64,7 +64,7 @@ forktest(void)
         //printf(1, "Program C[%d] %d\n", getpid(), i);
 	loop();
       }
-  }
+  }  
   else
   {
     int pid2;
@@ -93,7 +93,7 @@ forktest(void)
 
       for (i=0;i<50;i++)
       {
-	//printf(1, "Program B[%d] %d\n", getpid(), i);
+	      //printf(1, "Program B[%d] %d\n", getpid(), i);
         loop();
       }
     }

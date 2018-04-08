@@ -108,3 +108,57 @@ int sys_shutdown(void)
 
   return 0;
 }
+	
+int sys_setrunningticks(void)
+{
+  if (argint(0, &cpu->var) < 0)
+  {
+    cprintf("setrunningticks() failed!\n");
+    return -1;
+  }
+
+  return 0;
+}
+int sys_setwaitingticks(void)
+{
+  if (argint(0, &cpu->var1) < 0)
+  {
+    cprintf("setwaitingticks() failed!\n");
+    return -1;
+  }
+
+  return 0;
+}
+
+int sys_setpriority(void)
+{
+	//struct proc *p;
+	int pid;
+	int priority;
+	if(argint(0, &pid)<0)
+	{
+		return -1;
+	}
+	argint(1,&priority);
+	/*acquire(&ptable.lock);
+	
+	for(p = ptable.proc; p< &ptable.proc[NPROC]; p++)
+	{
+		if(p->pid == pid)
+		{
+			p-> priority = priority;
+			proc->state = RUNNABLE;
+			sched();
+			release(&ptable.lock);
+			return 0;
+		}
+	}
+	for(p = ptable.proc; p< &ptable.proc[NPROC]; p++)
+	{
+		release(&ptable.lock);
+		return -1;
+	}*/
+ return 0;		
+}
+	
+	
