@@ -54,6 +54,7 @@ allocproc(void)
   p->priority = 4;
   p->runticks = 0;
   p->waitticks= 0;
+ 
   release(&ptable.lock);
   return 0;
 
@@ -63,6 +64,7 @@ found:
   p->priority = 4;
   p->runticks = 0;
   p->waitticks= 0;
+  p->flag = 0;
   q0[c0] = p;
   c0++;
   
@@ -382,6 +384,7 @@ scheduler(void)
 	  		}
 	  		
 	  		 ran = 1;
+	  		
  		
 	  	    proc = p;
 	  	    switchuvm(p);
@@ -393,8 +396,13 @@ scheduler(void)
 			
 			if(p ->pid > 2)
 	  	    {
-	  	    	p->runticks++;
-	  	    	//cprintf("running ticks for process %d \n",p->state);
+	  	    	if(p->flag == 0)
+	  	    	{
+	  	    		p->runticks++;
+		  	    	//cprintf("running ticks for process %d \n",p->state);
+		  	    }	
+		  	  // p->flag =1
+		  	    
 	  	    }
 	  	    
 	  	    if(p->runticks > cpu->var)
@@ -417,7 +425,19 @@ scheduler(void)
 			  // It should have changed its p->state before coming back.
 			 proc = 0;
 	 	 }	
-	 	
+	 	for(int x=0;x < c0; x++)
+	 	{
+	 		p = q0[x];
+	 		if(p->state != RUNNABLE)
+	 		{
+	 				p->flag = 1;	
+	 		}
+	 		else
+	 		{
+	 			p->flag = 0;
+	 		}
+	 		
+	    }
 	 	if((c0 < 3) && (c1 > 0))
 	 	{
 	 			//cprintf("Testing6-----\n");
@@ -663,12 +683,47 @@ procdump(void)
 int systempriority(int pid,int priority)
 {
 	struct proc *p;
-	for(p = ptable.proc; p< &ptable.proc[NPROC]; p++)
+	for(int i= 0; i< c0 ; i++)
 	{
+		p = q0[i];
 		if(p->pid == pid)
 		{
 			p-> priority = priority;	
+			if(priority == 0)
+			{
+				p->flag = 1;
+				p->runticks = 0;
+			}
+			else 
+			{
+				p->flag = 0;	
+			}
 		}
+		
+	}
+	for(int j=0;j < c1;j++)
+	{
+		p = q1[j];
+		if(p->pid == pid)
+		{
+			p-> priority = priority;	
+			if(priority == 0)
+			{
+					q0[c0] = p;
+		  	    	c0++;  
+		  	    	for(int l=j;l< c1 - 1;l++)
+		  	    	{
+		  	    		q1[l] = q1[l+1];
+		  	    	}
+		  	    	c1--;
+					p->flag = 1;
+			}
+			else 
+			{
+				p->flag = 0;	
+			}
+		}
+		
 	}
 	return 0;	
 }
