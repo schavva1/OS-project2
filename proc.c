@@ -425,20 +425,23 @@ scheduler(void)
 			  // It should have changed its p->state before coming back.
 			 proc = 0;
 	 	 }	
+	 	int bit;
 	 	for(int x=0;x < c0; x++)
 	 	{
+	 		
 	 		p = q0[x];
 	 		if(p->state != RUNNABLE)
 	 		{
-	 				p->flag = 1;	
+	 			 	bit = 1;
 	 		}
 	 		else
 	 		{
-	 			p->flag = 0;
+	 			bit = 0;
+	 			break;
 	 		}
 	 		
 	    }
-	 	if((c0 < 3) && (c1 > 0))
+	 	if((bit == 1) && (c1 > 0))
 	 	{
 	 			//cprintf("Testing6-----\n");
 	 			int d,max,max_index=0;
