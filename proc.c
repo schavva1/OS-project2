@@ -386,9 +386,9 @@ scheduler(void)
 	  		 ran = 1;
 	  		
  		
-	  	    proc = p;
-	  	    switchuvm(p);
-	  	    p->state = RUNNING;
+      proc = p;
+ 	    switchuvm(p);
+	    p->state = RUNNING;
 			swtch(&cpu->scheduler, proc->context);
 			switchkvm();
 			//cprintf("process executing in c0 is %d \n",p->pid);
@@ -425,7 +425,7 @@ scheduler(void)
 			  // It should have changed its p->state before coming back.
 			 proc = 0;
 	 	 }	
-	 	int bit;
+    int bit;
 	 	for(int x=0;x < c0; x++)
 	 	{
 	 		
@@ -440,7 +440,7 @@ scheduler(void)
 	 			break;
 	 		}
 	 		
-	    }
+    }
 	 	if((bit == 1) && (c1 > 0))
 	 	{
 	 			//cprintf("Testing6-----\n");
@@ -731,27 +731,9 @@ int systempriority(int pid,int priority)
 	return 0;	
 }
 	
-/*int systempriority(int pid,int priority)
-{
-	//struct proc *p;
-	int p,old;
-	old = proc->priority;
-	if(p>=0 && p<201)
-	{
-		proc->priority = p;
-	}
-	else
-	{
-		return -1;
-	}
-	if(p >old)
-	{
-		yield();
-	}
-	return old;
-}	
 
-int systempriority(int pid,int priority)
+
+/*int systempriority(int pid,int priority)
 {
 	struct proc *p;
 	acquire(&ptable.lock);
