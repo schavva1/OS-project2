@@ -301,6 +301,7 @@ wait(void)
   }
 }
 
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -386,9 +387,9 @@ scheduler(void)
 	  		 ran = 1;
 	  		
  		
-      proc = p;
- 	    switchuvm(p);
-	    p->state = RUNNING;
+		  	proc = p;
+	 	    switchuvm(p);
+			p->state = RUNNING;
 			swtch(&cpu->scheduler, proc->context);
 			switchkvm();
 			//cprintf("process executing in c0 is %d \n",p->pid);
@@ -405,10 +406,30 @@ scheduler(void)
 		  	    
 	  	    }
 	  	    
+	  	    for(int d=0;d<c1;d++)
+		  	{
+		  	    q1[d] -> waitticks++;
+		  	    
+		  	    if(q1[d] -> waitticks > cpu->var1)
+			  	{
+			  	    	
+			  	    q0[c0] = q1[d];
+			  	    q0[c0] -> waitticks = 0;
+			  	    c0++;  
+			  	    for(j=i;j< c1 - 1;j++)
+			  	    {
+			  	    	q1[j] = q1[j+1];
+			  	    }
+			  	    c1--;	                                                        
+			  	}
+		  	}
+
+	  	    
 	  	    if(p->runticks > cpu->var)
 	  	    {
 	  	    	
 	  	    	q1[c1] = p;
+	  	    	q1[c1] -> runticks = 0;
 	  	    	c1++;  
 	  	    	
 	  	    	for(j=i;j< c0 - 1;j++)
@@ -425,7 +446,7 @@ scheduler(void)
 			  // It should have changed its p->state before coming back.
 			 proc = 0;
 	 	 }	
-    int bit;
+    	int bit = 0;
 	 	for(int x=0;x < c0; x++)
 	 	{
 	 		
@@ -440,7 +461,7 @@ scheduler(void)
 	 			break;
 	 		}
 	 		
-    }
+    	}
 	 	if((bit == 1) && (c1 > 0))
 	 	{
 	 			//cprintf("Testing6-----\n");
@@ -469,7 +490,8 @@ scheduler(void)
 		  		ran = 1;
 		  		
 		  	    proc = p;
-		  	    p->waitticks++;
+		  	    
+
 		  	    
 		  	    //cprintf("wait ticks for process are %d",p->waitticks);
 		  	    
@@ -477,11 +499,21 @@ scheduler(void)
 		  	    p->state = RUNNING;
 				swtch(&cpu->scheduler, proc->context);
 				switchkvm();
+
+				for(d=0;d<c1;d++)
+		  	    {
+		  	    	if (p -> pid != q1[d] -> pid)
+		  	    	{
+		  	    		q1[d]->waitticks++;
+		  	    	}
+		  	    }
+
 				//cprintf("process executing in c1 is %d \n", p->pid);
 		  	    if(p->waitticks > cpu->var1)
 		  	    {
 		  	    	
 		  	    	q0[c0] = p;
+		  	    	q0[c0] -> waitticks = 0;
 		  	    	c0++;  
 		  	    	for(j=i;j< c1 - 1;j++)
 		  	    	{
